@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "a8885edb-ee0d-4551-b3d1-be8b8bede356"
+				"spark.autotune.trackingId": "3b64d7be-4f65-44a7-a17e-d9a9832dc26a"
 			}
 		},
 		"metadata": {
@@ -54,23 +54,81 @@
 				"source": [
 					"from pyspark.sql import SparkSession\n",
 					"from pyspark.sql.functions import (\n",
-					"    when, col, substring_index, expr, concat_ws, lit, to_date\n",
+					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,when\n",
 					")\n",
 					""
 				],
-				"execution_count": 5
+				"execution_count": 39
 			},
 			{
 				"cell_type": "code",
 				"source": [
 					"filepath = \"abfss://rebates@testingadls11.dfs.core.windows.net/Shipfile.csv\"\n",
-					"df_ship = spark.read.csv(filepath,header=True, inferSchema=True)\n",
+					"df_ship = spark.read.csv(filepath,inferSchema=True,header=True)\n",
 					"# display(df_ship)\n",
 					"filepath_bvd = \"abfss://rebates@testingadls11.dfs.core.windows.net/BVD.csv\"\n",
-					"df_bvd = spark.read.csv(filepath_bvd,header=True, inferSchema=True)\n",
+					"df_bvd = spark.read.csv(filepath_bvd,inferSchema=True,header=True)\n",
 					"# display(df_ship)"
 				],
-				"execution_count": 6
+				"execution_count": 35
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"df_bvd= df_bvd.withColumn(\"Key\",\n",
+					" concat(\n",
+					"    when(col('ShippedQty') >0 , col('T2PONumber')). otherwise(col('T2CreditNoteNumber')), \n",
+					"    col('ShipmentLine'),\n",
+					"    col('ShipmentNumber'),\n",
+					"    col('T2MPN'),split(col('ShipDate'),\" \")[0]\n",
+					"        )\n",
+					"    )\n",
+					"\n",
+					"# df_bvd.describe()\n",
+					"df_bvd.printSchema()"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"df_merge = df_ship.join(df_bvd, on='Key', how= 'left')"
+				],
+				"execution_count": 47
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"display(df_merge)"
+				],
+				"execution_count": 48
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"# display(df_ship)\n",
+					"df_ship.head()"
+				],
+				"execution_count": 29
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"display(df_bvd)"
+				],
+				"execution_count": 45
 			}
 		]
 	}
