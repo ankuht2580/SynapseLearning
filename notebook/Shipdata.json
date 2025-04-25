@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "c21ab66a-a0de-44a0-bd95-03bc2f205891"
+				"spark.autotune.trackingId": "a8885edb-ee0d-4551-b3d1-be8b8bede356"
 			}
 		},
 		"metadata": {
@@ -26,7 +26,7 @@
 			"enableDebugMode": false,
 			"kernelspec": {
 				"name": "synapse_pyspark",
-				"display_name": "python"
+				"display_name": "Synapse PySpark"
 			},
 			"language_info": {
 				"name": "python"
@@ -52,9 +52,25 @@
 			{
 				"cell_type": "code",
 				"source": [
+					"from pyspark.sql import SparkSession\n",
+					"from pyspark.sql.functions import (\n",
+					"    when, col, substring_index, expr, concat_ws, lit, to_date\n",
+					")\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 5
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"filepath = \"abfss://rebates@testingadls11.dfs.core.windows.net/Shipfile.csv\"\n",
+					"df_ship = spark.read.csv(filepath,header=True, inferSchema=True)\n",
+					"# display(df_ship)\n",
+					"filepath_bvd = \"abfss://rebates@testingadls11.dfs.core.windows.net/BVD.csv\"\n",
+					"df_bvd = spark.read.csv(filepath_bvd,header=True, inferSchema=True)\n",
+					"# display(df_ship)"
+				],
+				"execution_count": 6
 			}
 		]
 	}
