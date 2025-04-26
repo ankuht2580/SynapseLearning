@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "3b64d7be-4f65-44a7-a17e-d9a9832dc26a"
+				"spark.autotune.trackingId": "919a22ed-35e5-479a-b207-d1cd9ac5e83d"
 			}
 		},
 		"metadata": {
@@ -54,11 +54,11 @@
 				"source": [
 					"from pyspark.sql import SparkSession\n",
 					"from pyspark.sql.functions import (\n",
-					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,when\n",
+					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
 					")\n",
-					""
+					"from datetime import datetime"
 				],
-				"execution_count": 39
+				"execution_count": 12
 			},
 			{
 				"cell_type": "code",
@@ -70,7 +70,7 @@
 					"df_bvd = spark.read.csv(filepath_bvd,inferSchema=True,header=True)\n",
 					"# display(df_ship)"
 				],
-				"execution_count": 35
+				"execution_count": 4
 			},
 			{
 				"cell_type": "code",
@@ -78,6 +78,11 @@
 					"collapsed": false
 				},
 				"source": [
+					"df_bvd = df_bvd.withColumn(\n",
+					"    \"ShipDate\",\n",
+					"    date_format(to_date(col(\"ShipDate\"), \"dd-MM-yyyy HH:mm\"), \"MM/dd/yyyy\")\n",
+					")\n",
+					"\n",
 					"df_bvd= df_bvd.withColumn(\"Key\",\n",
 					" concat(\n",
 					"    when(col('ShippedQty') >0 , col('T2PONumber')). otherwise(col('T2CreditNoteNumber')), \n",
@@ -90,14 +95,22 @@
 					"# df_bvd.describe()\n",
 					"df_bvd.printSchema()"
 				],
-				"execution_count": null
+				"execution_count": 13
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"df_ship.select(\"Key\").show(10, truncate=False)\n",
+					"df_bvd.select(\"Key\").show(10, truncate=False)"
+				],
+				"execution_count": 14
 			},
 			{
 				"cell_type": "code",
 				"source": [
 					"df_merge = df_ship.join(df_bvd, on='Key', how= 'left')"
 				],
-				"execution_count": 47
+				"execution_count": 15
 			},
 			{
 				"cell_type": "code",
@@ -107,7 +120,7 @@
 				"source": [
 					"display(df_merge)"
 				],
-				"execution_count": 48
+				"execution_count": 16
 			},
 			{
 				"cell_type": "code",
