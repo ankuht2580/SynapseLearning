@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "919a22ed-35e5-479a-b207-d1cd9ac5e83d"
+				"spark.autotune.trackingId": "67f6ecd7-d1cc-443a-9712-e77ccfb062a4"
 			}
 		},
 		"metadata": {
@@ -58,7 +58,7 @@
 					")\n",
 					"from datetime import datetime"
 				],
-				"execution_count": 12
+				"execution_count": 1
 			},
 			{
 				"cell_type": "code",
@@ -70,7 +70,7 @@
 					"df_bvd = spark.read.csv(filepath_bvd,inferSchema=True,header=True)\n",
 					"# display(df_ship)"
 				],
-				"execution_count": 4
+				"execution_count": 2
 			},
 			{
 				"cell_type": "code",
@@ -95,7 +95,7 @@
 					"# df_bvd.describe()\n",
 					"df_bvd.printSchema()"
 				],
-				"execution_count": 13
+				"execution_count": 3
 			},
 			{
 				"cell_type": "code",
@@ -103,14 +103,14 @@
 					"df_ship.select(\"Key\").show(10, truncate=False)\n",
 					"df_bvd.select(\"Key\").show(10, truncate=False)"
 				],
-				"execution_count": 14
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
 				"source": [
 					"df_merge = df_ship.join(df_bvd, on='Key', how= 'left')"
 				],
-				"execution_count": 15
+				"execution_count": 5
 			},
 			{
 				"cell_type": "code",
@@ -118,9 +118,22 @@
 					"collapsed": false
 				},
 				"source": [
-					"display(df_merge)"
+					"df_merge = df_merge.drop(\"shipdate\")\n",
+					"df_merge.printSchema()"
 				],
-				"execution_count": 16
+				"execution_count": 9
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# Output path for the DataFrame\n",
+					"output_path = \"abfss://finaloutput@testingadls11.dfs.core.windows.net/df_merge\"\n",
+					"\n",
+					"# Write DataFrame to Azure Data Lake in Parquet format\n",
+					"df_merge.write.mode(\"overwrite\").parquet(output_path)\n",
+					""
+				],
+				"execution_count": 10
 			},
 			{
 				"cell_type": "code",
