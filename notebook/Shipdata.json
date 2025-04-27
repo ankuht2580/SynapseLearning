@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "67f6ecd7-d1cc-443a-9712-e77ccfb062a4"
+				"spark.autotune.trackingId": "52d5209e-1f07-487f-b507-05665edc4603"
 			}
 		},
 		"metadata": {
@@ -141,10 +141,10 @@
 					"collapsed": false
 				},
 				"source": [
-					"# display(df_ship)\n",
-					"df_ship.head()"
+					"spark.sql(\"CREATE DATABASE IF NOT EXISTS rebates\")\n",
+					"df_merge.write.mode(\"overwrite\").saveAsTable(\"rebates.shipdata\")"
 				],
-				"execution_count": 29
+				"execution_count": 11
 			},
 			{
 				"cell_type": "code",
