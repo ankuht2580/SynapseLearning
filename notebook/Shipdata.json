@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "52d5209e-1f07-487f-b507-05665edc4603"
+				"spark.autotune.trackingId": "d28625a3-f79a-49d4-94b2-c1e818f1ebc2"
 			}
 		},
 		"metadata": {
@@ -56,9 +56,12 @@
 					"from pyspark.sql.functions import (\n",
 					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
 					")\n",
-					"from datetime import datetime"
+					"from datetime import datetime\n",
+					"\n",
+					"from pyspark.sql.window import Window\n",
+					"from pyspark.sql.functions import row_number"
 				],
-				"execution_count": 1
+				"execution_count": 10
 			},
 			{
 				"cell_type": "code",
@@ -92,10 +95,23 @@
 					"        )\n",
 					"    )\n",
 					"\n",
-					"# df_bvd.describe()\n",
-					"df_bvd.printSchema()"
+					""
 				],
-				"execution_count": 3
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# Define window: partition by Key, order by latestupdateddate descending\n",
+					"window_spec = Window.partitionBy(\"Key\").orderBy(df_bvd[\"LastUpdatedTimeStamp\"].desc())\n",
+					"\n",
+					"# Add row number\n",
+					"df_bvd = df_bvd.withColumn(\"row_num\", row_number().over(window_spec))\n",
+					"\n",
+					"# Filter to get only the latest record for each Key\n",
+					"df_bvd = df_bvd.filter(df_bvd[\"row_num\"] == 1).drop(\"row_num\")"
+				],
+				"execution_count": 13
 			},
 			{
 				"cell_type": "code",
@@ -110,7 +126,7 @@
 				"source": [
 					"df_merge = df_ship.join(df_bvd, on='Key', how= 'left')"
 				],
-				"execution_count": 5
+				"execution_count": 16
 			},
 			{
 				"cell_type": "code",
@@ -152,9 +168,12 @@
 					"collapsed": false
 				},
 				"source": [
-					"display(df_bvd)"
+					"df_bvd.describe().show()\n",
+					"# df_bvd.summary(\"count\", \"min\", \"max\", \"mean\", \"stddev\").show()\n",
+					"# df_bvd.describe()\n",
+					"# df_bvd.printSchema()"
 				],
-				"execution_count": 45
+				"execution_count": 14
 			}
 		]
 	}
