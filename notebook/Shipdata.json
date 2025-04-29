@@ -18,7 +18,7 @@
 				"spark.dynamicAllocation.enabled": "false",
 				"spark.dynamicAllocation.minExecutors": "2",
 				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "d28625a3-f79a-49d4-94b2-c1e818f1ebc2"
+				"spark.autotune.trackingId": "82908b83-ff06-4fd3-a219-4084d23566da"
 			}
 		},
 		"metadata": {
@@ -53,6 +53,7 @@
 				"cell_type": "code",
 				"source": [
 					"from pyspark.sql import SparkSession\n",
+					"\n",
 					"from pyspark.sql.functions import (\n",
 					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
 					")\n",
@@ -73,7 +74,7 @@
 					"df_bvd = spark.read.csv(filepath_bvd,inferSchema=True,header=True)\n",
 					"# display(df_ship)"
 				],
-				"execution_count": 2
+				"execution_count": 22
 			},
 			{
 				"cell_type": "code",
@@ -97,7 +98,7 @@
 					"\n",
 					""
 				],
-				"execution_count": null
+				"execution_count": 23
 			},
 			{
 				"cell_type": "code",
@@ -111,7 +112,14 @@
 					"# Filter to get only the latest record for each Key\n",
 					"df_bvd = df_bvd.filter(df_bvd[\"row_num\"] == 1).drop(\"row_num\")"
 				],
-				"execution_count": 13
+				"execution_count": 24
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					""
+				],
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -124,9 +132,16 @@
 			{
 				"cell_type": "code",
 				"source": [
-					"df_merge = df_ship.join(df_bvd, on='Key', how= 'left')"
+					"prefix = \"bvd_\"\n",
+					"\n",
+					"# Rename columns except the join key\n",
+					"df_bvd_renamed = df_bvd.select(\n",
+					"    *[col(c).alias(f\"{prefix}{c}\") if c != \"Key\" else col(c) for c in df_bvd.columns]\n",
+					")\n",
+					"\n",
+					"df_merge = df_ship.join(df_bvd_renamed, on='Key', how= 'left')"
 				],
-				"execution_count": 16
+				"execution_count": 28
 			},
 			{
 				"cell_type": "code",
@@ -134,10 +149,10 @@
 					"collapsed": false
 				},
 				"source": [
-					"df_merge = df_merge.drop(\"shipdate\")\n",
+					"df_merge = df_merge.drop(\"BVDTransactionID\",\"ShipDateYearMonth\",\"bvd_ShipDate\")\n",
 					"df_merge.printSchema()"
 				],
-				"execution_count": 9
+				"execution_count": 30
 			},
 			{
 				"cell_type": "code",
@@ -168,12 +183,13 @@
 					"collapsed": false
 				},
 				"source": [
-					"df_bvd.describe().show()\n",
+					"# df_bvd.describe().show()\n",
 					"# df_bvd.summary(\"count\", \"min\", \"max\", \"mean\", \"stddev\").show()\n",
 					"# df_bvd.describe()\n",
-					"# df_bvd.printSchema()"
+					"# df_bvd.printSchema()\n",
+					"display(df_merge)"
 				],
-				"execution_count": 14
+				"execution_count": 27
 			}
 		]
 	}
