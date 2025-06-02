@@ -15,12 +15,11 @@
 				"spark.dynamicAllocation.enabled": "true",
 				"spark.dynamicAllocation.minExecutors": "1",
 				"spark.dynamicAllocation.maxExecutors": "3",
-				"spark.autotune.trackingId": "76ef0369-601f-42b1-91a9-1c0d1c881b78",
+				"spark.autotune.trackingId": "12d13908-a41c-4927-8dd7-d98b14b313db",
 				"spark.synapse.context.sjdname": "Spark job copy"
 			},
 			"args": [
-				"abfss://synapseoutput@testingadls11.dfs.core.windows.net/Pricing",
-				"Validation.csv",
+				"abfss://synapseoutput@testingadls11.dfs.core.windows.net/PricingValidation.csv",
 				"abfss://finaloutput@testingadls11.dfs.core.windows.net/SparkJobOutput/"
 			],
 			"jars": [],
