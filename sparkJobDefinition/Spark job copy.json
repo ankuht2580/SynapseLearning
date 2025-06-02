@@ -12,10 +12,10 @@
 			"name": "Spark job copy",
 			"file": "abfss://synapseoutput@testingadls11.dfs.core.windows.net/saprk_job.py",
 			"conf": {
-				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.enabled": "true",
 				"spark.dynamicAllocation.minExecutors": "1",
-				"spark.dynamicAllocation.maxExecutors": "2",
-				"spark.autotune.trackingId": "eb575c78-2c58-4e51-ae62-80dd68b16a96",
+				"spark.dynamicAllocation.maxExecutors": "3",
+				"spark.autotune.trackingId": "76ef0369-601f-42b1-91a9-1c0d1c881b78",
 				"spark.synapse.context.sjdname": "Spark job copy"
 			},
 			"args": [
@@ -32,7 +32,7 @@
 			"driverCores": 4,
 			"executorMemory": "28g",
 			"executorCores": 4,
-			"numExecutors": 2
+			"numExecutors": 1
 		}
 	}
 }
