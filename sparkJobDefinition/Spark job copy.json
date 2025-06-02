@@ -2,7 +2,7 @@
 	"name": "Spark job copy",
 	"properties": {
 		"targetBigDataPool": {
-			"referenceName": "heavyspark",
+			"referenceName": "Spark1",
 			"type": "BigDataPoolReference"
 		},
 		"requiredSparkVersion": "3.4",
@@ -15,7 +15,7 @@
 				"spark.dynamicAllocation.enabled": "true",
 				"spark.dynamicAllocation.minExecutors": "1",
 				"spark.dynamicAllocation.maxExecutors": "3",
-				"spark.autotune.trackingId": "564ef9e4-1344-45ee-b691-8f81e940b9a4",
+				"spark.autotune.trackingId": "192ecf1a-0a3b-4d97-9fd1-bfadf82bdc16",
 				"spark.synapse.context.sjdname": "Spark job copy"
 			},
 			"args": [
@@ -27,10 +27,10 @@
 				""
 			],
 			"files": [],
-			"driverMemory": "56g",
-			"driverCores": 8,
-			"executorMemory": "56g",
-			"executorCores": 8,
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
 			"numExecutors": 1
 		}
 	}
