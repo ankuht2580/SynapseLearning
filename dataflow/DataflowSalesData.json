@@ -1,0 +1,95 @@
+{
+	"name": "DataflowSalesData",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"dataset": {
+						"referenceName": "ADLSSalesDataset",
+						"type": "DatasetReference"
+					},
+					"name": "SalesData"
+				}
+			],
+			"sinks": [
+				{
+					"dataset": {
+						"referenceName": "ADLSSalesOutput",
+						"type": "DatasetReference"
+					},
+					"name": "sink1",
+					"rejectedDataLinkedService": {
+						"referenceName": "ADLSSalesData",
+						"type": "LinkedServiceReference"
+					}
+				}
+			],
+			"transformations": [
+				{
+					"name": "filter",
+					"description": "filter out Oppo"
+				},
+				{
+					"name": "derivedColumn1"
+				},
+				{
+					"name": "aggregate1"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          Product as string,",
+				"          Brand as string,",
+				"          {Product Code} as string,",
+				"          {Product Specification} as string,",
+				"          Price as integer,",
+				"          {Inward Date} as date,",
+				"          {Dispatch Date} as date,",
+				"          {Quantity Sold} as integer,",
+				"          {Customer Name} as string,",
+				"          {Customer Location} as string,",
+				"          Region as string,",
+				"          {Core Specification} as string,",
+				"          {Processor Specification} as string,",
+				"          RAM as string,",
+				"          ROM as string,",
+				"          SSD as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false) ~> SalesData",
+				"SalesData filter({Product Code} != 'Oppo',",
+				"     partitionBy('hash', 1)) ~> filter",
+				"filter derive(Revenue = multiply(Price,{Quantity Sold}),",
+				"     partitionBy('roundRobin', 2)) ~> derivedColumn1",
+				"derivedColumn1 aggregate(groupBy(Brand,",
+				"          Product),",
+				"     {Total Qty } = sum({Quantity Sold}),",
+				"          {Total Revenue} = sum(Revenue),",
+				"     partitionBy('roundRobin', 2,",
+				"          Brand",
+				"     )) ~> aggregate1",
+				"aggregate1 sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     input(",
+				"          {T2 PO Number} as string,",
+				"          {Shipment Number} as string,",
+				"          {Shipment Line} as string,",
+				"          {T2 Supplier Name} as string,",
+				"          {Part Number (MPN)} as string,",
+				"          {Ship To Location} as string,",
+				"          {Shipment Date} as string,",
+				"          {Masked Price} as string,",
+				"          {Negotiated Price} as string,",
+				"          {Pricing Delta} as string",
+				"     ),",
+				"     umask: 0022,",
+				"     preCommands: [],",
+				"     postCommands: [],",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> sink1"
+			]
+		}
+	}
+}

@@ -1,0 +1,108 @@
+{
+	"name": "ADLSSalesDataset",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ADLSSalesData",
+			"type": "LinkedServiceReference",
+			"parameters": {
+				"StorageURL": "https://testingadls11.dfs.core.windows.net/",
+				"ServicePrincipleID": "9fdbca0e-a279-4fb9-a3c4-0064279a69b9"
+			}
+		},
+		"parameters": {
+			"Folder": {
+				"type": "string",
+				"defaultValue": "testingdata"
+			},
+			"File": {
+				"type": "string",
+				"defaultValue": "mobile_sales_data.csv"
+			}
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": {
+					"value": "@dataset().File",
+					"type": "Expression"
+				},
+				"fileSystem": {
+					"value": "@dataset().Folder",
+					"type": "Expression"
+				}
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"firstRowAsHeader": true,
+			"quoteChar": "\""
+		},
+		"schema": [
+			{
+				"name": "Product",
+				"type": "String"
+			},
+			{
+				"name": "Brand",
+				"type": "String"
+			},
+			{
+				"name": "Product Code",
+				"type": "String"
+			},
+			{
+				"name": "Product Specification",
+				"type": "String"
+			},
+			{
+				"name": "Price",
+				"type": "String"
+			},
+			{
+				"name": "Inward Date",
+				"type": "String"
+			},
+			{
+				"name": "Dispatch Date",
+				"type": "String"
+			},
+			{
+				"name": "Quantity Sold",
+				"type": "String"
+			},
+			{
+				"name": "Customer Name",
+				"type": "String"
+			},
+			{
+				"name": "Customer Location",
+				"type": "String"
+			},
+			{
+				"name": "Region",
+				"type": "String"
+			},
+			{
+				"name": "Core Specification",
+				"type": "String"
+			},
+			{
+				"name": "Processor Specification",
+				"type": "String"
+			},
+			{
+				"name": "RAM",
+				"type": "String"
+			},
+			{
+				"name": "ROM",
+				"type": "String"
+			},
+			{
+				"name": "SSD",
+				"type": "String"
+			}
+		]
+	}
+}

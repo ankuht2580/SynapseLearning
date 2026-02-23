@@ -1,0 +1,285 @@
+{
+	"name": "rackserver",
+	"properties": {
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "heavyspark",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "56g",
+			"driverCores": 8,
+			"executorMemory": "56g",
+			"executorCores": 8,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "4d779d9e-6985-4c15-bec6-f6931d3c7307"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/0caf3479-0cc9-4719-b406-52febaa09699/resourceGroups/synapselearn/providers/Microsoft.Synapse/workspaces/newsynlearn/bigDataPools/heavyspark",
+				"name": "heavyspark",
+				"type": "Spark",
+				"endpoint": "https://newsynlearn.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/heavyspark",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.4",
+				"nodeCount": 10,
+				"cores": 8,
+				"memory": 56,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql import SparkSession\n",
+					"\n",
+					"from pyspark.sql.functions import (\n",
+					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
+					")\n",
+					"from datetime import datetime\n",
+					"\n",
+					"from pyspark.sql.window import Window\n",
+					"from pyspark.sql.functions import row_number"
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"filepath = \"abfss://rackserver@testingadls11.dfs.core.windows.net/Rackcost\"\n",
+					"df_cpe = spark.read.csv(filepath,inferSchema=True,header=True)"
+				],
+				"execution_count": 11
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"display(df_cpe)"
+				],
+				"execution_count": 12
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# get the previous quarter\n",
+					"today = datetime.today()\n",
+					"fy = today.year + 1 if today.month >= 7 else today.year\n",
+					"fq = ((today.month - 1) // 3) -1\n",
+					"\n",
+					"fyq_prefix = f\"FY{str(fy)[-2:]}Q{fq}\"\n",
+					"\n",
+					"print(fyq_prefix)"
+				],
+				"execution_count": 17
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"\n",
+					"from pyspark.sql import functions as F\n",
+					"\n",
+					"# fyq = \"FY25Q1\"\n",
+					"\n",
+					"df_main = (\n",
+					"    df_cpe b \n",
+					"    .filter(F.col(\"TAMPERIOD\").startswith(fyq_prefix))\n",
+					"    .filter(F.col(\"PRIORITY\").isin(\"0\", \"1\"))\n",
+					"    .filter(F.col(\"MSPN\") != \"\")\n",
+					"\n",
+					"    # for all 4 regions\n",
+					"    .filter(F.col(\"REGION\").isin(\"APAC\", \"EMEA\", \"LATAM\", \"AMER\"))\n",
+					"    .filter(F.col(\"BOMEXPLODED\") == 0)\n",
+					"    .filter(F.col(\"COUNTRY\").isNull())\n",
+					"\n",
+					"    .select(\n",
+					"        F.col(\"REGION\"),\n",
+					"\n",
+					"        # SINAME logic:\n",
+					"        F.when(F.col(\"SINAME\") == \"WORLD WIDE TECHNOLOGY INC\", F.lit(\"WWT\"))\n",
+					"         .when(F.instr(F.col(\"SINAME\"), \" \") == 0, F.col(\"SINAME\"))\n",
+					"         .otherwise(F.upper(F.split(F.col(\"SINAME\"), \" \").getItem(0)))\n",
+					"         .alias(\"SINAME\"),\n",
+					"\n",
+					"        F.col(\"PFAM\"),\n",
+					"        F.col(\"PFAMMSF\"),\n",
+					"        F.col(\"MSPN\"),\n",
+					"        F.col(\"COSTCATEGORY\"),\n",
+					"        F.col(\"PARTCATEGORY\"),\n",
+					"        F.col(\"ITEMDESCRIPTION\"),\n",
+					"        F.upper(F.col(\"MFGNAME\")).alias(\"MFGNAME\"),\n",
+					"\n",
+					"        # QTY logic\n",
+					"        F.when(F.col(\"ITEMDESCRIPTION\").like(\"Ops Model%\"), F.lit(1))\n",
+					"         .otherwise(F.col(\"QTY\"))\n",
+					"         .alias(\"QTY\"),\n",
+					"\n",
+					"        F.col(\"UNITPRICE\"),\n",
+					"        F.col(\"NETAMOUNT\"),\n",
+					"        F.col(\"SERVICECOST\"),\n",
+					"\n",
+					"        # TOTAL_RACKPRICE logic\n",
+					"        F.when(\n",
+					"            (F.col(\"COSTCATEGORY\") == \"SI MANAGED\") & (F.col(\"UNITPRICE\") == 0),\n",
+					"            F.col(\"SERVICECOST\")\n",
+					"        ).when(\n",
+					"            (F.col(\"COSTCATEGORY\") == \"SI MANAGED\") & (F.col(\"UNITPRICE\") > 0),\n",
+					"            F.col(\"UNITPRICE\")\n",
+					"        ).otherwise(F.col(\"NETAMOUNT\") + F.col(\"SERVICECOST\"))\n",
+					"         .alias(\"TOTAL_RACKPRICE\"),\n",
+					"\n",
+					"        F.col(\"TAMPERIOD\"),\n",
+					"        F.col(\"RECORDID\"),\n",
+					"        F.col(\"VERSION\"),\n",
+					"        F.col(\"ISPUBLISHED\"),\n",
+					"        F.col(\"ISLATEST\")\n",
+					"    )\n",
+					")\n",
+					""
+				],
+				"execution_count": 13
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"display(df_main)"
+				],
+				"execution_count": 14
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"\n",
+					"from pyspark.sql import functions as F\n",
+					"from pyspark.sql.window import Window\n",
+					"\n",
+					"w_msf = Window.partitionBy(\"PFAM\", \"SINAME\").orderBy(F.col(\"PFAMMSF\").desc())\n",
+					"w_ver = Window.partitionBy(\"PFAM\", \"PFAMMSF\", \"SINAME\").orderBy(F.col(\"VERSION\").desc())\n",
+					"\n",
+					"published_maxVer = (\n",
+					"    df_main\n",
+					"    .filter(F.col(\"ISLATEST\") == 1)\n",
+					"    .withColumn(\"UID\", F.upper(F.concat(F.col(\"SINAME\"), F.col(\"PFAM\"))))\n",
+					"    .withColumn(\"rank_MSF\", F.dense_rank().over(w_msf))\n",
+					"    .filter(F.col(\"rank_MSF\") == 1)\n",
+					"    .withColumn(\"rank_Ver\", F.dense_rank().over(w_ver))\n",
+					"    .filter(F.col(\"rank_Ver\") == 1)\n",
+					")\n",
+					"\n",
+					"unpublished_maxVer = (\n",
+					"    df_main\n",
+					"    .filter(F.col(\"ISLATEST\") == 0)\n",
+					"    .withColumn(\"UID\", F.upper(F.concat(F.col(\"SINAME\"), F.col(\"PFAM\"))))\n",
+					"    .withColumn(\"rank_MSF\", F.dense_rank().over(w_msf))\n",
+					"    .filter(F.col(\"rank_MSF\") == 1)\n",
+					"    .withColumn(\"rank_Ver\", F.dense_rank().over(w_ver))\n",
+					"    .filter(F.col(\"rank_Ver\") == 1)\n",
+					")\n",
+					"\n",
+					"tran_df = (\n",
+					"    published_maxVer.select(*df_main.columns, \"UID\")\n",
+					"    .unionByName(\n",
+					"        unpublished_maxVer.join(\n",
+					"            published_maxVer.select(\"UID\").distinct(), on=\"UID\", how=\"left_anti\"\n",
+					"        ).select(*df_main.columns, \"UID\"),\n",
+					"        allowMissingColumns=True\n",
+					"    )\n",
+					")\n",
+					""
+				],
+				"execution_count": 19
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"\n",
+					"#final df\n",
+					"from pyspark.sql import functions as F\n",
+					"\n",
+					"final_df = (\n",
+					"    tran_df\n",
+					"    .filter((F.col(\"MSPN\").isNotNull()) & (F.length(F.col(\"MSPN\")) > 0))\n",
+					"    .select(\n",
+					"        F.col(\"PFAM\").alias(\"PlatformName\"),\n",
+					"        F.col(\"PFAM\"),\n",
+					"        F.col(\"COSTCATEGORY\").alias(\"CostType\"),\n",
+					"        F.lit(None).alias(\"Assembly\"),\n",
+					"        F.col(\"PARTCATEGORY\").alias(\"PartType\"),\n",
+					"        F.lit(None).alias(\"ShortDesc\"),\n",
+					"        F.col(\"ITEMDESCRIPTION\").alias(\"Description\"),\n",
+					"        F.col(\"SINAME\").alias(\"Vendor\"),\n",
+					"        F.lit(None).alias(\"Capacity\"),\n",
+					"        F.col(\"QTY\").cast(\"int\").alias(\"NoPerRack\"),\n",
+					"        F.col(\"UNITPRICE\").cast(\"double\").alias(\"UnitCost\"),\n",
+					"        F.col(\"TOTAL_RACKPRICE\").cast(\"double\").alias(\"RackPRICE\"),\n",
+					"        F.substring(F.col(\"TAMPERIOD\"), 1, 6).alias(\"Quarter\"),\n",
+					"        F.col(\"REGION\").alias(\"region\"),\n",
+					"        F.col(\"MSPN\"),\n",
+					"        F.col(\"MFGNAME\").alias(\"oemMFG\"),\n",
+					"        F.lit(0).alias(\"UnitPRICERebate\"),\n",
+					"        F.lit(0).alias(\"RackPRICERebate\"),\n",
+					"        F.lit(0).alias(\"SPrice\"),\n",
+					"        F.col(\"TOTAL_RACKPRICE\").cast(\"double\").alias(\"RPrice\"),\n",
+					"        F.lit(0).alias(\"shouldcost\"),\n",
+					"        F.lit(0).alias(\"ServersPerRack\"),\n",
+					"        F.current_timestamp().alias(\"DateSubmitted\")\n",
+					"    )\n",
+					")\n",
+					""
+				],
+				"execution_count": 20
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"\n",
+					"masterdatahistory_df = (\n",
+					"    final_df\n",
+					"    .withColumn(\n",
+					"        \"region\",\n",
+					"        F.when(F.col(\"region\") == \"AMER\", F.lit(\"NAMERICA\")).otherwise(F.col(\"region\"))\n",
+					"    )\n",
+					"    .withColumn(\n",
+					"        \"Vendor\",\n",
+					"        F.when(F.col(\"Vendor\") == \"HEWLETT\", F.lit(\"HPE\")).otherwise(F.col(\"Vendor\"))\n",
+					"    )\n",
+					")\n",
+					""
+				],
+				"execution_count": 21
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					""
+				],
+				"execution_count": null
+			}
+		]
+	}
+}

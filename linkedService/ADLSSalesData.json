@@ -1,0 +1,38 @@
+{
+	"name": "ADLSSalesData",
+	"properties": {
+		"parameters": {
+			"StorageURL": {
+				"type": "string",
+				"defaultValue": "https://testingadls11.dfs.core.windows.net/"
+			},
+			"ServicePrincipleID": {
+				"type": "string",
+				"defaultValue": "9fdbca0e-a279-4fb9-a3c4-0064279a69b9"
+			}
+		},
+		"annotations": [
+			"Dynamic ADLS "
+		],
+		"type": "AzureBlobFS",
+		"typeProperties": {
+			"url": "@{linkedService().StorageURL}",
+			"tenant": "53b5bb0a-5f9a-49d6-bd71-c879d90f7d48",
+			"servicePrincipalId": "@{linkedService().ServicePrincipleID}",
+			"servicePrincipalCredentialType": "ServicePrincipalKey",
+			"servicePrincipalCredential": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "KeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "ADLS-SP"
+			}
+		},
+		"connectVia": {
+			"referenceName": "AutoResolveIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/linkedservices"
+}

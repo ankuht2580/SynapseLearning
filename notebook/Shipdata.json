@@ -1,0 +1,196 @@
+{
+	"name": "Shipdata",
+	"properties": {
+		"description": "\n",
+		"nbformat": 4,
+		"nbformat_minor": 2,
+		"bigDataPool": {
+			"referenceName": "Spark1",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2",
+				"spark.autotune.trackingId": "82908b83-ff06-4fd3-a219-4084d23566da"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"enableDebugMode": false,
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/0caf3479-0cc9-4719-b406-52febaa09699/resourceGroups/synapselearn/providers/Microsoft.Synapse/workspaces/newsynlearn/bigDataPools/Spark1",
+				"name": "Spark1",
+				"type": "Spark",
+				"endpoint": "https://newsynlearn.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/Spark1",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "3.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28,
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"source": [
+					"from pyspark.sql import SparkSession\n",
+					"\n",
+					"from pyspark.sql.functions import (\n",
+					"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
+					")\n",
+					"from datetime import datetime\n",
+					"\n",
+					"from pyspark.sql.window import Window\n",
+					"from pyspark.sql.functions import row_number"
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"filepath = \"abfss://rebates@testingadls11.dfs.core.windows.net/Shipfile.csv\"\n",
+					"df_ship = spark.read.csv(filepath,inferSchema=True,header=True)\n",
+					"# display(df_ship)\n",
+					"filepath_bvd = \"abfss://rebates@testingadls11.dfs.core.windows.net/BVD.csv\"\n",
+					"df_bvd = spark.read.csv(filepath_bvd,inferSchema=True,header=True)\n",
+					"# display(df_ship)"
+				],
+				"execution_count": 22
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"df_bvd = df_bvd.withColumn(\n",
+					"    \"ShipDate\",\n",
+					"    date_format(to_date(col(\"ShipDate\"), \"dd-MM-yyyy HH:mm\"), \"MM/dd/yyyy\")\n",
+					")\n",
+					"\n",
+					"df_bvd= df_bvd.withColumn(\"Key\",\n",
+					" concat(\n",
+					"    when(col('ShippedQty') >0 , col('T2PONumber')). otherwise(col('T2CreditNoteNumber')), \n",
+					"    col('ShipmentLine'),\n",
+					"    col('ShipmentNumber'),\n",
+					"    col('T2MPN'),split(col('ShipDate'),\" \")[0]\n",
+					"        )\n",
+					"    )\n",
+					"\n",
+					""
+				],
+				"execution_count": 23
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# Define window: partition by Key, order by latestupdateddate descending\n",
+					"window_spec = Window.partitionBy(\"Key\").orderBy(df_bvd[\"LastUpdatedTimeStamp\"].desc())\n",
+					"\n",
+					"# Add row number\n",
+					"df_bvd = df_bvd.withColumn(\"row_num\", row_number().over(window_spec))\n",
+					"\n",
+					"# Filter to get only the latest record for each Key\n",
+					"df_bvd = df_bvd.filter(df_bvd[\"row_num\"] == 1).drop(\"row_num\")"
+				],
+				"execution_count": 24
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					""
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"df_ship.select(\"Key\").show(10, truncate=False)\n",
+					"df_bvd.select(\"Key\").show(10, truncate=False)"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"prefix = \"bvd_\"\n",
+					"\n",
+					"# Rename columns except the join key\n",
+					"df_bvd_renamed = df_bvd.select(\n",
+					"    *[col(c).alias(f\"{prefix}{c}\") if c != \"Key\" else col(c) for c in df_bvd.columns]\n",
+					")\n",
+					"\n",
+					"df_merge = df_ship.join(df_bvd_renamed, on='Key', how= 'left')"
+				],
+				"execution_count": 28
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"df_merge = df_merge.drop(\"BVDTransactionID\",\"ShipDateYearMonth\",\"bvd_ShipDate\")\n",
+					"df_merge.printSchema()"
+				],
+				"execution_count": 30
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# Output path for the DataFrame\n",
+					"output_path = \"abfss://finaloutput@testingadls11.dfs.core.windows.net/df_merge\"\n",
+					"\n",
+					"# Write DataFrame to Azure Data Lake in Parquet format\n",
+					"df_merge.write.mode(\"overwrite\").parquet(output_path)\n",
+					""
+				],
+				"execution_count": 10
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"spark.sql(\"CREATE DATABASE IF NOT EXISTS rebates\")\n",
+					"df_merge.write.mode(\"overwrite\").saveAsTable(\"rebates.shipdata\")"
+				],
+				"execution_count": 11
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"collapsed": false
+				},
+				"source": [
+					"# df_bvd.describe().show()\n",
+					"# df_bvd.summary(\"count\", \"min\", \"max\", \"mean\", \"stddev\").show()\n",
+					"# df_bvd.describe()\n",
+					"# df_bvd.printSchema()\n",
+					"display(df_merge)"
+				],
+				"execution_count": 27
+			}
+		]
+	}
+}

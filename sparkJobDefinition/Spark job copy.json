@@ -1,0 +1,37 @@
+{
+	"name": "Spark job copy",
+	"properties": {
+		"targetBigDataPool": {
+			"referenceName": "Spark1",
+			"type": "BigDataPoolReference"
+		},
+		"requiredSparkVersion": "3.4",
+		"language": "python",
+		"scanFolder": false,
+		"jobProperties": {
+			"name": "Spark job copy",
+			"file": "abfss://synapseoutput@testingadls11.dfs.core.windows.net/saprk_job.py",
+			"conf": {
+				"spark.dynamicAllocation.enabled": "true",
+				"spark.dynamicAllocation.minExecutors": "1",
+				"spark.dynamicAllocation.maxExecutors": "3",
+				"spark.autotune.trackingId": "192ecf1a-0a3b-4d97-9fd1-bfadf82bdc16",
+				"spark.synapse.context.sjdname": "Spark job copy"
+			},
+			"args": [
+				"abfss://synapseoutput@testingadls11.dfs.core.windows.net/PricingValidation.csv",
+				"abfss://finaloutput@testingadls11.dfs.core.windows.net/SparkJobOutput/"
+			],
+			"jars": [],
+			"pyFiles": [
+				""
+			],
+			"files": [],
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 1
+		}
+	}
+}

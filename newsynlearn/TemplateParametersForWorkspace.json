@@ -1,0 +1,27 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "newsynlearn"
+		},
+		"newsynlearn-WorkspaceDefaultSqlServer_connectionString": {
+			"value": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:newsynlearn.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"ADLSSalesData_properties_typeProperties_url": {
+			"value": "@{linkedService().StorageURL}"
+		},
+		"ADLSSalesData_properties_typeProperties_tenant": {
+			"value": "53b5bb0a-5f9a-49d6-bd71-c879d90f7d48"
+		},
+		"ADLSSalesData_properties_typeProperties_servicePrincipalId": {
+			"value": "@{linkedService().ServicePrincipleID}"
+		},
+		"KeyVault_properties_typeProperties_baseUrl": {
+			"value": "https://sqlkeylearning.vault.azure.net/"
+		},
+		"newsynlearn-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://testingadls11.dfs.core.windows.net"
+		}
+	}
+}

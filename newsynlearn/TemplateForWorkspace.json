@@ -1,0 +1,1105 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "newsynlearn"
+		},
+		"newsynlearn-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'newsynlearn-WorkspaceDefaultSqlServer'",
+			"defaultValue": "Integrated Security=False;Encrypt=True;Connection Timeout=30;Data Source=tcp:newsynlearn.sql.azuresynapse.net,1433;Initial Catalog=@{linkedService().DBName}"
+		},
+		"ADLSSalesData_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "@{linkedService().StorageURL}"
+		},
+		"ADLSSalesData_properties_typeProperties_tenant": {
+			"type": "string",
+			"defaultValue": "53b5bb0a-5f9a-49d6-bd71-c879d90f7d48"
+		},
+		"ADLSSalesData_properties_typeProperties_servicePrincipalId": {
+			"type": "string",
+			"defaultValue": "@{linkedService().ServicePrincipleID}"
+		},
+		"KeyVault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://sqlkeylearning.vault.azure.net/"
+		},
+		"newsynlearn-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://testingadls11.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/PipelineUsingDataflow')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Data flow1",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "DataflowSalesData",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"SalesData": {
+										"Folder": "testingdata",
+										"File": "mobile_sales_data.csv"
+									},
+									"sink1": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/dataflows/DataflowSalesData')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ADLSSalesDataset')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSSalesData",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"StorageURL": "https://testingadls11.dfs.core.windows.net/",
+						"ServicePrincipleID": "9fdbca0e-a279-4fb9-a3c4-0064279a69b9"
+					}
+				},
+				"parameters": {
+					"Folder": {
+						"type": "string",
+						"defaultValue": "testingdata"
+					},
+					"File": {
+						"type": "string",
+						"defaultValue": "mobile_sales_data.csv"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": {
+							"value": "@dataset().File",
+							"type": "Expression"
+						},
+						"fileSystem": {
+							"value": "@dataset().Folder",
+							"type": "Expression"
+						}
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "Product",
+						"type": "String"
+					},
+					{
+						"name": "Brand",
+						"type": "String"
+					},
+					{
+						"name": "Product Code",
+						"type": "String"
+					},
+					{
+						"name": "Product Specification",
+						"type": "String"
+					},
+					{
+						"name": "Price",
+						"type": "String"
+					},
+					{
+						"name": "Inward Date",
+						"type": "String"
+					},
+					{
+						"name": "Dispatch Date",
+						"type": "String"
+					},
+					{
+						"name": "Quantity Sold",
+						"type": "String"
+					},
+					{
+						"name": "Customer Name",
+						"type": "String"
+					},
+					{
+						"name": "Customer Location",
+						"type": "String"
+					},
+					{
+						"name": "Region",
+						"type": "String"
+					},
+					{
+						"name": "Core Specification",
+						"type": "String"
+					},
+					{
+						"name": "Processor Specification",
+						"type": "String"
+					},
+					{
+						"name": "RAM",
+						"type": "String"
+					},
+					{
+						"name": "ROM",
+						"type": "String"
+					},
+					{
+						"name": "SSD",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/ADLSSalesData')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ADLSSalesOutput')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ADLSSalesData",
+					"type": "LinkedServiceReference",
+					"parameters": {
+						"StorageURL": "https://testingadls11.dfs.core.windows.net/",
+						"ServicePrincipleID": "9fdbca0e-a279-4fb9-a3c4-0064279a69b9"
+					}
+				},
+				"annotations": [],
+				"type": "DelimitedText",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileSystem": "testingdata"
+					},
+					"columnDelimiter": ",",
+					"escapeChar": "\\",
+					"firstRowAsHeader": true,
+					"quoteChar": "\""
+				},
+				"schema": [
+					{
+						"name": "T2 PO Number",
+						"type": "String"
+					},
+					{
+						"name": "Shipment Number",
+						"type": "String"
+					},
+					{
+						"name": "Shipment Line",
+						"type": "String"
+					},
+					{
+						"name": "T2 Supplier Name",
+						"type": "String"
+					},
+					{
+						"name": "Part Number (MPN)",
+						"type": "String"
+					},
+					{
+						"name": "Ship To Location",
+						"type": "String"
+					},
+					{
+						"name": "Shipment Date",
+						"type": "String"
+					},
+					{
+						"name": "Masked Price",
+						"type": "String"
+					},
+					{
+						"name": "Negotiated Price",
+						"type": "String"
+					},
+					{
+						"name": "Pricing Delta",
+						"type": "String"
+					}
+				]
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/ADLSSalesData')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/ADLSSalesData')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"StorageURL": {
+						"type": "string",
+						"defaultValue": "https://testingadls11.dfs.core.windows.net/"
+					},
+					"ServicePrincipleID": {
+						"type": "string",
+						"defaultValue": "9fdbca0e-a279-4fb9-a3c4-0064279a69b9"
+					}
+				},
+				"annotations": [
+					"Dynamic ADLS "
+				],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('ADLSSalesData_properties_typeProperties_url')]",
+					"tenant": "[parameters('ADLSSalesData_properties_typeProperties_tenant')]",
+					"servicePrincipalId": "[parameters('ADLSSalesData_properties_typeProperties_servicePrincipalId')]",
+					"servicePrincipalCredentialType": "ServicePrincipalKey",
+					"servicePrincipalCredential": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "KeyVault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "ADLS-SP"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/KeyVault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/KeyVault')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('KeyVault_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/newsynlearn-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('newsynlearn-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/newsynlearn-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('newsynlearn-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DataflowSalesData')]",
+			"type": "Microsoft.Synapse/workspaces/dataflows",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"dataset": {
+								"referenceName": "ADLSSalesDataset",
+								"type": "DatasetReference"
+							},
+							"name": "SalesData"
+						}
+					],
+					"sinks": [
+						{
+							"dataset": {
+								"referenceName": "ADLSSalesOutput",
+								"type": "DatasetReference"
+							},
+							"name": "sink1",
+							"rejectedDataLinkedService": {
+								"referenceName": "ADLSSalesData",
+								"type": "LinkedServiceReference"
+							}
+						}
+					],
+					"transformations": [
+						{
+							"name": "filter",
+							"description": "filter out Oppo"
+						},
+						{
+							"name": "derivedColumn1"
+						},
+						{
+							"name": "aggregate1"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          Product as string,",
+						"          Brand as string,",
+						"          {Product Code} as string,",
+						"          {Product Specification} as string,",
+						"          Price as integer,",
+						"          {Inward Date} as date,",
+						"          {Dispatch Date} as date,",
+						"          {Quantity Sold} as integer,",
+						"          {Customer Name} as string,",
+						"          {Customer Location} as string,",
+						"          Region as string,",
+						"          {Core Specification} as string,",
+						"          {Processor Specification} as string,",
+						"          RAM as string,",
+						"          ROM as string,",
+						"          SSD as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false) ~> SalesData",
+						"SalesData filter({Product Code} != 'Oppo',",
+						"     partitionBy('hash', 1)) ~> filter",
+						"filter derive(Revenue = multiply(Price,{Quantity Sold}),",
+						"     partitionBy('roundRobin', 2)) ~> derivedColumn1",
+						"derivedColumn1 aggregate(groupBy(Brand,",
+						"          Product),",
+						"     {Total Qty } = sum({Quantity Sold}),",
+						"          {Total Revenue} = sum(Revenue),",
+						"     partitionBy('roundRobin', 2,",
+						"          Brand",
+						"     )) ~> aggregate1",
+						"aggregate1 sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     input(",
+						"          {T2 PO Number} as string,",
+						"          {Shipment Number} as string,",
+						"          {Shipment Line} as string,",
+						"          {T2 Supplier Name} as string,",
+						"          {Part Number (MPN)} as string,",
+						"          {Ship To Location} as string,",
+						"          {Shipment Date} as string,",
+						"          {Masked Price} as string,",
+						"          {Negotiated Price} as string,",
+						"          {Pricing Delta} as string",
+						"     ),",
+						"     umask: 0022,",
+						"     preCommands: [],",
+						"     postCommands: [],",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> sink1"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/ADLSSalesDataset')]",
+				"[concat(variables('workspaceId'), '/datasets/ADLSSalesOutput')]",
+				"[concat(variables('workspaceId'), '/linkedServices/ADLSSalesData')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Spark job copy')]",
+			"type": "Microsoft.Synapse/workspaces/sparkJobDefinitions",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"targetBigDataPool": {
+					"referenceName": "Spark1",
+					"type": "BigDataPoolReference"
+				},
+				"requiredSparkVersion": "3.4",
+				"language": "python",
+				"scanFolder": false,
+				"jobProperties": {
+					"name": "Spark job copy",
+					"file": "abfss://synapseoutput@testingadls11.dfs.core.windows.net/saprk_job.py",
+					"conf": {
+						"spark.dynamicAllocation.enabled": "true",
+						"spark.dynamicAllocation.minExecutors": "1",
+						"spark.dynamicAllocation.maxExecutors": "3",
+						"spark.autotune.trackingId": "192ecf1a-0a3b-4d97-9fd1-bfadf82bdc16",
+						"spark.synapse.context.sjdname": "Spark job copy"
+					},
+					"args": [
+						"abfss://synapseoutput@testingadls11.dfs.core.windows.net/PricingValidation.csv",
+						"abfss://finaloutput@testingadls11.dfs.core.windows.net/SparkJobOutput/"
+					],
+					"jars": [],
+					"pyFiles": [
+						""
+					],
+					"files": [],
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 1
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Shipdata')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"description": "\n",
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "Spark1",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "82908b83-ff06-4fd3-a219-4084d23566da"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/0caf3479-0cc9-4719-b406-52febaa09699/resourceGroups/synapselearn/providers/Microsoft.Synapse/workspaces/newsynlearn/bigDataPools/Spark1",
+						"name": "Spark1",
+						"type": "Spark",
+						"endpoint": "https://newsynlearn.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/Spark1",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"source": [
+							"from pyspark.sql import SparkSession\n",
+							"\n",
+							"from pyspark.sql.functions import (\n",
+							"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
+							")\n",
+							"from datetime import datetime\n",
+							"\n",
+							"from pyspark.sql.window import Window\n",
+							"from pyspark.sql.functions import row_number"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"filepath = \"abfss://rebates@testingadls11.dfs.core.windows.net/Shipfile.csv\"\n",
+							"df_ship = spark.read.csv(filepath,inferSchema=True,header=True)\n",
+							"# display(df_ship)\n",
+							"filepath_bvd = \"abfss://rebates@testingadls11.dfs.core.windows.net/BVD.csv\"\n",
+							"df_bvd = spark.read.csv(filepath_bvd,inferSchema=True,header=True)\n",
+							"# display(df_ship)"
+						],
+						"outputs": [],
+						"execution_count": 22
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"df_bvd = df_bvd.withColumn(\n",
+							"    \"ShipDate\",\n",
+							"    date_format(to_date(col(\"ShipDate\"), \"dd-MM-yyyy HH:mm\"), \"MM/dd/yyyy\")\n",
+							")\n",
+							"\n",
+							"df_bvd= df_bvd.withColumn(\"Key\",\n",
+							" concat(\n",
+							"    when(col('ShippedQty') >0 , col('T2PONumber')). otherwise(col('T2CreditNoteNumber')), \n",
+							"    col('ShipmentLine'),\n",
+							"    col('ShipmentNumber'),\n",
+							"    col('T2MPN'),split(col('ShipDate'),\" \")[0]\n",
+							"        )\n",
+							"    )\n",
+							"\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 23
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# Define window: partition by Key, order by latestupdateddate descending\n",
+							"window_spec = Window.partitionBy(\"Key\").orderBy(df_bvd[\"LastUpdatedTimeStamp\"].desc())\n",
+							"\n",
+							"# Add row number\n",
+							"df_bvd = df_bvd.withColumn(\"row_num\", row_number().over(window_spec))\n",
+							"\n",
+							"# Filter to get only the latest record for each Key\n",
+							"df_bvd = df_bvd.filter(df_bvd[\"row_num\"] == 1).drop(\"row_num\")"
+						],
+						"outputs": [],
+						"execution_count": 24
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"df_ship.select(\"Key\").show(10, truncate=False)\n",
+							"df_bvd.select(\"Key\").show(10, truncate=False)"
+						],
+						"outputs": [],
+						"execution_count": null
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"prefix = \"bvd_\"\n",
+							"\n",
+							"# Rename columns except the join key\n",
+							"df_bvd_renamed = df_bvd.select(\n",
+							"    *[col(c).alias(f\"{prefix}{c}\") if c != \"Key\" else col(c) for c in df_bvd.columns]\n",
+							")\n",
+							"\n",
+							"df_merge = df_ship.join(df_bvd_renamed, on='Key', how= 'left')"
+						],
+						"outputs": [],
+						"execution_count": 28
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"df_merge = df_merge.drop(\"BVDTransactionID\",\"ShipDateYearMonth\",\"bvd_ShipDate\")\n",
+							"df_merge.printSchema()"
+						],
+						"outputs": [],
+						"execution_count": 30
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# Output path for the DataFrame\n",
+							"output_path = \"abfss://finaloutput@testingadls11.dfs.core.windows.net/df_merge\"\n",
+							"\n",
+							"# Write DataFrame to Azure Data Lake in Parquet format\n",
+							"df_merge.write.mode(\"overwrite\").parquet(output_path)\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"spark.sql(\"CREATE DATABASE IF NOT EXISTS rebates\")\n",
+							"df_merge.write.mode(\"overwrite\").saveAsTable(\"rebates.shipdata\")"
+						],
+						"outputs": [],
+						"execution_count": 11
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"# df_bvd.describe().show()\n",
+							"# df_bvd.summary(\"count\", \"min\", \"max\", \"mean\", \"stddev\").show()\n",
+							"# df_bvd.describe()\n",
+							"# df_bvd.printSchema()\n",
+							"display(df_merge)"
+						],
+						"outputs": [],
+						"execution_count": 27
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/rackserver')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 4,
+				"nbformat_minor": 2,
+				"bigDataPool": {
+					"referenceName": "heavyspark",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "56g",
+					"driverCores": 8,
+					"executorMemory": "56g",
+					"executorCores": 8,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2",
+						"spark.autotune.trackingId": "23429a0b-fe34-400f-8ce6-0d2a2f8adce2"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"enableDebugMode": false,
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/0caf3479-0cc9-4719-b406-52febaa09699/resourceGroups/synapselearn/providers/Microsoft.Synapse/workspaces/newsynlearn/bigDataPools/heavyspark",
+						"name": "heavyspark",
+						"type": "Spark",
+						"endpoint": "https://newsynlearn.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/heavyspark",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "3.4",
+						"nodeCount": 10,
+						"cores": 8,
+						"memory": 56,
+						"automaticScaleJobs": false
+					},
+					"sessionKeepAliveTimeout": 30
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"from pyspark.sql import SparkSession\n",
+							"\n",
+							"from pyspark.sql.functions import (\n",
+							"    when, col,concat, substring_index, expr, concat_ws, lit, to_date, split,to_date, date_format\n",
+							")\n",
+							"from datetime import datetime\n",
+							"\n",
+							"from pyspark.sql.window import Window\n",
+							"from pyspark.sql.functions import row_number"
+						],
+						"outputs": [],
+						"execution_count": 10
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"filepath = \"abfss://rackserver@testingadls11.dfs.core.windows.net/Rackcost\"\n",
+							"df_cpe = spark.read.csv(filepath,inferSchema=True,header=True)"
+						],
+						"outputs": [],
+						"execution_count": 11
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"display(df_cpe)"
+						],
+						"outputs": [],
+						"execution_count": 12
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"# get the previous quarter\n",
+							"today = datetime.today()\n",
+							"fy = today.year + 1 if today.month >= 7 else today.year\n",
+							"fq = ((today.month - 1) // 3) -1\n",
+							"\n",
+							"fyq_prefix = f\"FY{str(fy)[-2:]}Q{fq}\"\n",
+							"\n",
+							"print(fyq_prefix)"
+						],
+						"outputs": [],
+						"execution_count": 17
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"\n",
+							"from pyspark.sql import functions as F\n",
+							"\n",
+							"# fyq = \"FY25Q1\"\n",
+							"\n",
+							"df_main = (\n",
+							"    df_cpe b \n",
+							"    .filter(F.col(\"TAMPERIOD\").startswith(fyq_prefix))\n",
+							"    .filter(F.col(\"PRIORITY\").isin(\"0\", \"1\"))\n",
+							"    .filter(F.col(\"MSPN\") != \"\")\n",
+							"\n",
+							"    # for all 4 regions\n",
+							"    .filter(F.col(\"REGION\").isin(\"APAC\", \"EMEA\", \"LATAM\", \"AMER\"))\n",
+							"    .filter(F.col(\"BOMEXPLODED\") == 0)\n",
+							"    .filter(F.col(\"COUNTRY\").isNull())\n",
+							"\n",
+							"    .select(\n",
+							"        F.col(\"REGION\"),\n",
+							"\n",
+							"        # SINAME logic:\n",
+							"        F.when(F.col(\"SINAME\") == \"WORLD WIDE TECHNOLOGY INC\", F.lit(\"WWT\"))\n",
+							"         .when(F.instr(F.col(\"SINAME\"), \" \") == 0, F.col(\"SINAME\"))\n",
+							"         .otherwise(F.upper(F.split(F.col(\"SINAME\"), \" \").getItem(0)))\n",
+							"         .alias(\"SINAME\"),\n",
+							"\n",
+							"        F.col(\"PFAM\"),\n",
+							"        F.col(\"PFAMMSF\"),\n",
+							"        F.col(\"MSPN\"),\n",
+							"        F.col(\"COSTCATEGORY\"),\n",
+							"        F.col(\"PARTCATEGORY\"),\n",
+							"        F.col(\"ITEMDESCRIPTION\"),\n",
+							"        F.upper(F.col(\"MFGNAME\")).alias(\"MFGNAME\"),\n",
+							"\n",
+							"        # QTY logic\n",
+							"        F.when(F.col(\"ITEMDESCRIPTION\").like(\"Ops Model%\"), F.lit(1))\n",
+							"         .otherwise(F.col(\"QTY\"))\n",
+							"         .alias(\"QTY\"),\n",
+							"\n",
+							"        F.col(\"UNITPRICE\"),\n",
+							"        F.col(\"NETAMOUNT\"),\n",
+							"        F.col(\"SERVICECOST\"),\n",
+							"\n",
+							"        # TOTAL_RACKPRICE logic\n",
+							"        F.when(\n",
+							"            (F.col(\"COSTCATEGORY\") == \"SI MANAGED\") & (F.col(\"UNITPRICE\") == 0),\n",
+							"            F.col(\"SERVICECOST\")\n",
+							"        ).when(\n",
+							"            (F.col(\"COSTCATEGORY\") == \"SI MANAGED\") & (F.col(\"UNITPRICE\") > 0),\n",
+							"            F.col(\"UNITPRICE\")\n",
+							"        ).otherwise(F.col(\"NETAMOUNT\") + F.col(\"SERVICECOST\"))\n",
+							"         .alias(\"TOTAL_RACKPRICE\"),\n",
+							"\n",
+							"        F.col(\"TAMPERIOD\"),\n",
+							"        F.col(\"RECORDID\"),\n",
+							"        F.col(\"VERSION\"),\n",
+							"        F.col(\"ISPUBLISHED\"),\n",
+							"        F.col(\"ISLATEST\")\n",
+							"    )\n",
+							")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 13
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"collapsed": false
+						},
+						"source": [
+							"display(df_main)"
+						],
+						"outputs": [],
+						"execution_count": 14
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"\n",
+							"from pyspark.sql import functions as F\n",
+							"from pyspark.sql.window import Window\n",
+							"\n",
+							"w_msf = Window.partitionBy(\"PFAM\", \"SINAME\").orderBy(F.col(\"PFAMMSF\").desc())\n",
+							"w_ver = Window.partitionBy(\"PFAM\", \"PFAMMSF\", \"SINAME\").orderBy(F.col(\"VERSION\").desc())\n",
+							"\n",
+							"published_maxVer = (\n",
+							"    df_main\n",
+							"    .filter(F.col(\"ISLATEST\") == 1)\n",
+							"    .withColumn(\"UID\", F.upper(F.concat(F.col(\"SINAME\"), F.col(\"PFAM\"))))\n",
+							"    .withColumn(\"rank_MSF\", F.dense_rank().over(w_msf))\n",
+							"    .filter(F.col(\"rank_MSF\") == 1)\n",
+							"    .withColumn(\"rank_Ver\", F.dense_rank().over(w_ver))\n",
+							"    .filter(F.col(\"rank_Ver\") == 1)\n",
+							")\n",
+							"\n",
+							"unpublished_maxVer = (\n",
+							"    df_main\n",
+							"    .filter(F.col(\"ISLATEST\") == 0)\n",
+							"    .withColumn(\"UID\", F.upper(F.concat(F.col(\"SINAME\"), F.col(\"PFAM\"))))\n",
+							"    .withColumn(\"rank_MSF\", F.dense_rank().over(w_msf))\n",
+							"    .filter(F.col(\"rank_MSF\") == 1)\n",
+							"    .withColumn(\"rank_Ver\", F.dense_rank().over(w_ver))\n",
+							"    .filter(F.col(\"rank_Ver\") == 1)\n",
+							")\n",
+							"\n",
+							"tran_df = (\n",
+							"    published_maxVer.select(*df_main.columns, \"UID\")\n",
+							"    .unionByName(\n",
+							"        unpublished_maxVer.join(\n",
+							"            published_maxVer.select(\"UID\").distinct(), on=\"UID\", how=\"left_anti\"\n",
+							"        ).select(*df_main.columns, \"UID\"),\n",
+							"        allowMissingColumns=True\n",
+							"    )\n",
+							")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 19
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"\n",
+							"#final df\n",
+							"from pyspark.sql import functions as F\n",
+							"\n",
+							"final_df = (\n",
+							"    tran_df\n",
+							"    .filter((F.col(\"MSPN\").isNotNull()) & (F.length(F.col(\"MSPN\")) > 0))\n",
+							"    .select(\n",
+							"        F.col(\"PFAM\").alias(\"PlatformName\"),\n",
+							"        F.col(\"PFAM\"),\n",
+							"        F.col(\"COSTCATEGORY\").alias(\"CostType\"),\n",
+							"        F.lit(None).alias(\"Assembly\"),\n",
+							"        F.col(\"PARTCATEGORY\").alias(\"PartType\"),\n",
+							"        F.lit(None).alias(\"ShortDesc\"),\n",
+							"        F.col(\"ITEMDESCRIPTION\").alias(\"Description\"),\n",
+							"        F.col(\"SINAME\").alias(\"Vendor\"),\n",
+							"        F.lit(None).alias(\"Capacity\"),\n",
+							"        F.col(\"QTY\").cast(\"int\").alias(\"NoPerRack\"),\n",
+							"        F.col(\"UNITPRICE\").cast(\"double\").alias(\"UnitCost\"),\n",
+							"        F.col(\"TOTAL_RACKPRICE\").cast(\"double\").alias(\"RackPRICE\"),\n",
+							"        F.substring(F.col(\"TAMPERIOD\"), 1, 6).alias(\"Quarter\"),\n",
+							"        F.col(\"REGION\").alias(\"region\"),\n",
+							"        F.col(\"MSPN\"),\n",
+							"        F.col(\"MFGNAME\").alias(\"oemMFG\"),\n",
+							"        F.lit(0).alias(\"UnitPRICERebate\"),\n",
+							"        F.lit(0).alias(\"RackPRICERebate\"),\n",
+							"        F.lit(0).alias(\"SPrice\"),\n",
+							"        F.col(\"TOTAL_RACKPRICE\").cast(\"double\").alias(\"RPrice\"),\n",
+							"        F.lit(0).alias(\"shouldcost\"),\n",
+							"        F.lit(0).alias(\"ServersPerRack\"),\n",
+							"        F.current_timestamp().alias(\"DateSubmitted\")\n",
+							"    )\n",
+							")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 20
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							"\n",
+							"masterdatahistory_df = (\n",
+							"    final_df\n",
+							"    .withColumn(\n",
+							"        \"region\",\n",
+							"        F.when(F.col(\"region\") == \"AMER\", F.lit(\"NAMERICA\")).otherwise(F.col(\"region\"))\n",
+							"    )\n",
+							"    .withColumn(\n",
+							"        \"Vendor\",\n",
+							"        F.when(F.col(\"Vendor\") == \"HEWLETT\", F.lit(\"HPE\")).otherwise(F.col(\"Vendor\"))\n",
+							"    )\n",
+							")\n",
+							""
+						],
+						"outputs": [],
+						"execution_count": 21
+					},
+					{
+						"cell_type": "code",
+						"metadata": {},
+						"source": [
+							""
+						],
+						"outputs": [],
+						"execution_count": null
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Spark1')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 10,
+					"minNodeCount": 3
+				},
+				"nodeCount": 3,
+				"nodeSize": "Small",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.4",
+				"libraryRequirements": {
+					"content": "setuptools~=45.2.0\r\npyspark>=3.4.1\r\npython-dateutil~=2.9.0\r\npandas>=1.5.3\r\nmlforecast\r\nantropy",
+					"filename": "requirements.txt",
+					"time": "2025-06-02T17:18:54.0981573Z"
+				},
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "westus"
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/heavyspark')]",
+			"type": "Microsoft.Synapse/workspaces/bigDataPools",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"autoPause": {
+					"enabled": true,
+					"delayInMinutes": 15
+				},
+				"autoScale": {
+					"enabled": true,
+					"maxNodeCount": 6,
+					"minNodeCount": 3
+				},
+				"nodeCount": 10,
+				"nodeSize": "Medium",
+				"nodeSizeFamily": "MemoryOptimized",
+				"sparkVersion": "3.4",
+				"isComputeIsolationEnabled": false,
+				"sessionLevelPackagesEnabled": false,
+				"annotations": []
+			},
+			"dependsOn": [],
+			"location": "westus"
+		}
+	]
+}
